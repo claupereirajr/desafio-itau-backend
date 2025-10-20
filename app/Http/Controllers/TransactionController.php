@@ -14,7 +14,32 @@ class TransactionController extends Controller
      */
     public function index()
     {
-        //
+        $transactions = Cache::get('transactions', []);
+        $oneMinuteAgo = now()->subMinute();
+
+        $recentTransactions = array_filter($transactions, function ($transaction) use ($oneMinuteAgo) {
+            return \Carbon\Carbon::parse($transaction['dataHora'])->isAfter($oneMinuteAgo);
+        });
+
+        $values = array_column($recentTransactions, 'valor');
+
+        if (empty($values)) {
+            return response()->json([
+                'count' => 0,
+                'sum' => 0,
+                'avg' => 0,
+                'min' => 0,
+                'max' => 0
+            ]);
+        }
+
+        return response()->json([
+            'count' => count($values),
+            'sum' => array_sum($values),
+            'avg' => array_sum($values) / count($values),
+            'min' => min($values),
+            'max' => max($values)
+        ]);
     }
 
     /**
@@ -24,12 +49,14 @@ class TransactionController extends Controller
     {
         $validated = $request->validated();
         $transaction = [
-            'id' => fake()->uuid(),
             'valor' => $validated['valor'],
             'dataHora' => $validated['dataHora']
         ];
-        // Store temporarily (e.g. 10 minutes)
-        Cache::put('transaction_' . $transaction['id'], $transaction, now()->addMinutes(10));
+
+        $transactions = Cache::get('transactions', []);
+        $transactions[fake()->uuid()] = $transaction;
+        Cache::put('transactions', $transactions, now()->addHour());
+
         if ($transaction) {
             return response()->json('', 201);
         } else {
@@ -58,7 +85,7 @@ class TransactionController extends Controller
      */
     public function destroy()
     {
-        Cache::clear();
+        Cache::forget('transactions');
         return response()->json('', 200);
     }
 }

@@ -22,8 +22,8 @@ class TransactionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'valor' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,2})?$/', 'min:0'],
-            'dataHora' => 'required|date|before:now'
+            'valor' => ['required', 'numeric', 'decimal:2', 'min:0'],
+            'dataHora' => ['required', 'date', 'before:now']
         ];
     }
 }
